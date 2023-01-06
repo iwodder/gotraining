@@ -1,0 +1,55 @@
+* {
+    box-sizing: border-box;
+    color: black;
+}
+
+body {
+    padding: 5rem;
+    background-color: lightgoldenrodyellow;
+}
+
+hr {
+    width: 75%;
+}
+
+.banner {
+    margin: auto;
+    width: 75%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.main {
+    margin: auto;
+    width: 75%;
+}
+
+.options {
+    margin: auto;
+    width: 75%;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+}
+
+.button {
+    font: bold 12px Arial;
+    background: lightskyblue;
+    padding: 1rem;
+    margin: 1rem;
+    border: 0.1rem solid black;
+    text-decoration: none;
+    word-break: break-word;
+    text-align: center;
+}
+
+.button:hover {
+    color: black;
+}
+
+.button:hover {
+    background: deepskyblue;
+}
