@@ -11,11 +11,11 @@ import (
 func init() {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatal("Unable to locate your home directory.")
+		log.Fatal("Unable to locate home directory.")
 	}
 	r, err := tasks.NewRepository(home + "/.tasks")
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Unable to open database at %s/.tasks", home))
+		log.Fatal(fmt.Sprintf("Unable to open file at %s/.tasks", home))
 	}
 	taskManager = tasks.NewTaskManager(r)
 }

@@ -36,8 +36,8 @@ func TestBoltRepository_LoadAll(t *testing.T) {
 		{
 			"Can load a list of tasks",
 			[]Task{
-				{ID: 1, Name: "Task 1", Description: "Description 1"},
-				{ID: 2, Name: "Task 2", Description: "Description 2"},
+				{Name: "Task 1", Description: "Description 1"},
+				{Name: "Task 2", Description: "Description 2"},
 			},
 		},
 	}
@@ -65,10 +65,9 @@ func TestBoltRepository_Store(t *testing.T) {
 			name: "Can store a task",
 			args: args{
 				t: Task{
-					ID:          1,
 					Name:        "Task 1",
 					Description: "A description",
-					Completed:   false,
+					Complete:    false,
 				},
 			},
 		},
@@ -76,9 +75,8 @@ func TestBoltRepository_Store(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo.Store(tt.args.t)
-			tasks := repo.LoadAll()
-			assert.Equal(t, 1, len(tasks))
-			assert.Equal(t, tt.args.t, tasks[0])
+			task, _ := repo.Load(tt.args.t.Name)
+			assert.Equal(t, tt.args.t, *task)
 		})
 	}
 }
@@ -87,7 +85,7 @@ func TestBoltRepository_Update(t *testing.T) {
 	teardown := setupTest(t)
 	defer teardown(t)
 
-	repo.Store(Task{Name: "Task 2", Description: "Initial Description", Completed: false})
+	repo.Store(Task{Name: "Task 2", Description: "Initial Description", Complete: false})
 
 	type args struct {
 		task Task
@@ -100,10 +98,9 @@ func TestBoltRepository_Update(t *testing.T) {
 			"Can update a task",
 			args{
 				Task{
-					ID:          1,
 					Name:        "Task 2",
 					Description: "NewRepository Description",
-					Completed:   false,
+					Complete:    false,
 				},
 			},
 		},
@@ -120,7 +117,7 @@ func TestBoltRepository_LoadTask(t *testing.T) {
 	teardown := setupTest(t)
 	defer teardown(t)
 
-	repo.Store(Task{Name: "Task 1", Description: "Initial Description", Completed: false})
+	repo.Store(Task{Name: "Task 1", Description: "Initial Description", Complete: false})
 
 	type args struct {
 		taskName string
@@ -136,11 +133,40 @@ func TestBoltRepository_LoadTask(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, _ := repo.LoadTask(tt.args.taskName)
+			actual, _ := repo.Load(tt.args.taskName)
 			if !assert.NotNil(t, actual) {
 				t.FailNow()
 			}
 			assert.Equal(t, tt.args.taskName, actual.Name)
+		})
+	}
+}
+
+func TestBoltRepository_RemoveTask(t *testing.T) {
+	teardown := setupTest(t)
+	defer teardown(t)
+
+	repo.Store(Task{Name: "Task 1", Description: "Initial Description", Complete: false})
+
+	type args struct {
+		taskName string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			"Can remove a task",
+			args{taskName: "Task 1"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo.Delete(Task{Name: tt.args.taskName})
+
+			_, err := repo.Load(tt.args.taskName)
+
+			assert.Equal(t, "No task with name Task 1", err.Error())
 		})
 	}
 }

@@ -1,10 +1,12 @@
 package tasks
 
+import "time"
+
 type Task struct {
-	ID          uint64
-	Name        string
-	Description string
-	Completed   bool
+	Name           string
+	Description    string
+	Complete       bool
+	CompletionDate time.Time
 }
 
 type TaskManager struct {
@@ -12,10 +14,11 @@ type TaskManager struct {
 }
 
 type TaskRepository interface {
-	Store(t Task) Task
+	Store(t Task) (Task, error)
 	LoadAll() []Task
 	Update(task Task) Task
-	LoadTask(name string) (*Task, error)
+	Load(name string) (*Task, error)
+	Delete(task Task)
 }
 
 func NewTaskManager(t TaskRepository) *TaskManager {
@@ -24,16 +27,19 @@ func NewTaskManager(t TaskRepository) *TaskManager {
 	}
 }
 
-func (tm *TaskManager) CreateTask(name string, description string) *Task {
-	t := tm.repo.Store(Task{
+func (tm *TaskManager) CreateTask(name string, description string) (*Task, error) {
+	t, err := tm.repo.Store(Task{
 		Name:        name,
 		Description: description,
 	})
-	return &t
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }
 
 func (tm *TaskManager) GetTask(name string) (*Task, error) {
-	return tm.repo.LoadTask(name)
+	return tm.repo.Load(name)
 }
 
 func (tm *TaskManager) ListTasks() []Task {
@@ -41,7 +47,12 @@ func (tm *TaskManager) ListTasks() []Task {
 }
 
 func (tm *TaskManager) Complete(task Task) *Task {
-	task.Completed = true
+	task.CompletionDate = time.Now()
+	task.Complete = true
 	t := tm.repo.Update(task)
 	return &t
+}
+
+func (tm *TaskManager) Remove(name string) {
+	tm.repo.Delete(Task{Name: name})
 }

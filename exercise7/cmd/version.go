@@ -10,10 +10,9 @@ func init() {
 }
 
 var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "print version and exit",
-	Long:  "Some long message here about what the version is called and why.",
+	Use:  "version",
+	Long: "Print version and exit",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Task Manager")
+		fmt.Println("Embed build number later...")
 	},
 }

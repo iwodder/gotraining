@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
+	"log"
 )
 
 var (
@@ -9,10 +11,13 @@ var (
 
 	addTaskCmd = &cobra.Command{
 		Use:   "add",
-		Short: "add a task",
-		Long:  "Some long message here about what the version is called and why.",
+		Short: "Add a task",
 		Run: func(cmd *cobra.Command, args []string) {
-			taskManager.CreateTask(name, description)
+			_, err := taskManager.CreateTask(name, description)
+			if err != nil {
+				log.Fatal(fmt.Sprintf("Unable to create task, \"%s\". Please try again later.", name))
+			}
+			fmt.Printf("Another task to crush! \"%s\" was added to your list", name)
 		},
 	}
 )

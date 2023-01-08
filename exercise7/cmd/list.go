@@ -8,10 +8,11 @@ import (
 var (
 	listTasksCmd = &cobra.Command{
 		Use:  "list",
-		Long: "Lists all tasks.",
+		Long: "Lists all tasks in your to-do list.",
 		Run: func(cmd *cobra.Command, args []string) {
-			for _, v := range taskManager.ListTasks() {
-				fmt.Printf("Title: %s, Description: %s\n", v.Name, v.Description)
+			fmt.Println("====Task List====")
+			for i, v := range taskManager.ListTasks() {
+				fmt.Printf("  %d. Title: %s, Description: %s, Complete: %t\n", i+1, v.Name, v.Description, v.Complete)
 			}
 		},
 	}

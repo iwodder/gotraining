@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -24,11 +23,15 @@ func NewRepository(db string) (*BoltRepository, error) {
 	}, nil
 }
 
-func (b *BoltRepository) Store(t Task) Task {
+func (b *BoltRepository) Store(t Task) (Task, error) {
 	if updateFn, err := serializeTask(&t); err == nil {
 		err = b.db.Update(updateFn)
+		if err != nil {
+			return Task{}, err
+		}
 	}
-	return t
+
+	return t, nil
 }
 
 func (b *BoltRepository) LoadAll() []Task {
@@ -61,9 +64,8 @@ func (b *BoltRepository) Update(task Task) Task {
 	enc.Encode(&task)
 	err := b.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("tasks"))
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, task.ID)
-		b.Put(key, buff.Bytes())
+
+		b.Put([]byte(task.Name), buff.Bytes())
 		return nil
 	})
 	if err != nil {
@@ -72,30 +74,32 @@ func (b *BoltRepository) Update(task Task) Task {
 	return task
 }
 
-func (b *BoltRepository) LoadTask(name string) (*Task, error) {
-	var ret *Task
+func (b *BoltRepository) Load(name string) (*Task, error) {
+	var data []byte
 	err := b.db.View(func(tx *bolt.Tx) error {
-		var buff bytes.Buffer
-		tx.Bucket([]byte("tasks")).ForEach(func(k, v []byte) error {
-			var t Task
-			buff.Write(v)
-			dec := gob.NewDecoder(&buff)
-			err := dec.Decode(&t)
-			if err != nil {
-				return err
-			}
-			if t.Name == name {
-				ret = &t
-
-			}
-			return nil
-		})
-		if ret == nil {
-			return errors.New(fmt.Sprintf("Unable to find task with name %s", name))
-		}
+		b := tx.Bucket([]byte("tasks"))
+		data = b.Get([]byte(name))
 		return nil
 	})
-	return ret, err
+	if err != nil {
+		return nil, err
+	}
+	if data == nil {
+		return nil, errors.New(fmt.Sprintf("No task with name %s", name))
+	}
+	var t Task
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	if err := dec.Decode(&t); err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (b *BoltRepository) Delete(task Task) {
+	b.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("tasks"))
+		return b.Delete([]byte(task.Name))
+	})
 }
 
 func getDb(db string) (*bolt.DB, error) {
@@ -112,7 +116,6 @@ func getDb(db string) (*bolt.DB, error) {
 func serializeTask(t *Task) (dbFn, error) {
 	return func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("tasks"))
-		t.ID, _ = b.NextSequence()
 
 		var buff bytes.Buffer
 		enc := gob.NewEncoder(&buff)
@@ -122,9 +125,7 @@ func serializeTask(t *Task) (dbFn, error) {
 			return err
 		}
 
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, t.ID)
-		return b.Put(key, buff.Bytes())
+		return b.Put([]byte(t.Name), buff.Bytes())
 	}, nil
 }
 

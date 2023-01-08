@@ -5,29 +5,33 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
-func Test_CreateTask(t *testing.T) {
-	tm := TaskManager{
+var tm TaskManager
+
+func setup(t *testing.T) {
+	tm = TaskManager{
 		repo: &MemRepository{
 			tasks: make([]Task, 0, 10),
 		},
 	}
+}
 
-	task := tm.CreateTask("build app", "create the task manager app")
+func Test_CreateTask(t *testing.T) {
+	setup(t)
+
+	task, _ := tm.CreateTask("build app", "create the task manager app")
 
 	assert.Equal(t, "build app", task.Name)
 	assert.Equal(t, "create the task manager app", task.Description)
-	assert.False(t, task.Completed)
+	assert.False(t, task.Complete)
 }
 
 func Test_CreateTaskThenListTasks(t *testing.T) {
-	tm := TaskManager{
-		repo: &MemRepository{
-			tasks: make([]Task, 0, 10),
-		},
-	}
-	task := tm.CreateTask("build app", "create the task manager app")
+	setup(t)
+
+	task, _ := tm.CreateTask("build app", "create the task manager app")
 
 	taskSlice := tm.ListTasks()
 
@@ -36,11 +40,8 @@ func Test_CreateTaskThenListTasks(t *testing.T) {
 }
 
 func Test_CreateTaskThenLoadTask(t *testing.T) {
-	tm := TaskManager{
-		repo: &MemRepository{
-			tasks: make([]Task, 0, 10),
-		},
-	}
+	setup(t)
+
 	tm.CreateTask("build app", "create the task manager app")
 
 	task, _ := tm.GetTask("build app")
@@ -51,16 +52,31 @@ func Test_CreateTaskThenLoadTask(t *testing.T) {
 }
 
 func Test_CompleteTask(t *testing.T) {
-	tm := TaskManager{
-		repo: &MemRepository{
-			tasks: make([]Task, 0, 10),
-		},
-	}
-	task := tm.CreateTask("build app", "create the task manager app")
+	setup(t)
+	task, _ := tm.CreateTask("build app", "create the task manager app")
 
 	task = tm.Complete(*task)
 
-	assert.True(t, task.Completed)
+	assert.True(t, task.Complete)
+	assertEqualCompletionDate(t, task.CompletionDate)
+}
+
+func assertEqualCompletionDate(t *testing.T, date time.Time) {
+	year, month, day := time.Now().Date()
+	assert.Equalf(t, day, date.Day(), "Expected matching day, wanted %d, got %d", day, date.Day())
+	assert.Equalf(t, month, date.Month(), "Expected matching month, wanted %d, got %d", month, date.Month())
+	assert.Equalf(t, year, date.Year(), "Expected matching year, wanted %d, got %d", year, date.Year())
+}
+
+func Test_RemoveTask(t *testing.T) {
+	setup(t)
+	tm.CreateTask("build app", "create the task manager app")
+
+	tm.Remove("build app")
+
+	_, err := tm.GetTask("build app")
+
+	assert.Equal(t, "Unable to locate a task with name build app", err.Error())
 }
 
 type MemRepository struct {
@@ -68,15 +84,14 @@ type MemRepository struct {
 	id    uint64
 }
 
-func (m *MemRepository) Store(t Task) Task {
+func (m *MemRepository) Store(t Task) (Task, error) {
 	newTask := Task{
 		Name:        t.Name,
 		Description: t.Description,
-		Completed:   t.Completed,
-		ID:          m.nextId(),
+		Complete:    t.Complete,
 	}
 	m.tasks = append(m.tasks, newTask)
-	return newTask
+	return newTask, nil
 }
 
 func (m *MemRepository) LoadAll() []Task {
@@ -94,18 +109,35 @@ func (m *MemRepository) Update(task Task) Task {
 	return task
 }
 
-func (m *MemRepository) LoadTask(name string) (*Task, error) {
+func (m *MemRepository) Load(name string) (*Task, error) {
 	for _, v := range m.tasks {
 		if v.Name == name {
 			return &Task{
-				ID:          v.ID,
 				Name:        v.Name,
 				Description: v.Description,
-				Completed:   v.Completed,
+				Complete:    v.Complete,
 			}, nil
 		}
 	}
 	return nil, errors.New(fmt.Sprintf("Unable to locate a task with name %s", name))
+}
+
+func (m *MemRepository) Delete(task Task) {
+	idx := -1
+	for i, v := range m.tasks {
+		if v.Name == task.Name {
+			idx = i
+			break
+		}
+	}
+	if idx != -1 {
+		if len(m.tasks) == 1 {
+			m.tasks = []Task{}
+		} else {
+			m.tasks[idx] = m.tasks[len(m.tasks)-1]
+			m.tasks = m.tasks[:len(m.tasks)-1]
+		}
+	}
 }
 
 func (m *MemRepository) nextId() uint64 {
