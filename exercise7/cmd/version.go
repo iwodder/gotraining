@@ -9,10 +9,14 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
-var versionCmd = &cobra.Command{
-	Use:  "version",
-	Long: "Print version and exit",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Embed build number later...")
-	},
-}
+var (
+	Version string
+
+	versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Print version and exit",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Version:", Version)
+		},
+	}
+)
