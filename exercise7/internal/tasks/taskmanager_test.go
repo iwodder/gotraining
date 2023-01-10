@@ -191,7 +191,7 @@ func (m *MemRepository) Load(name string) (*Task, error) {
 	return nil, errors.New(fmt.Sprintf("Unable to locate a task with name %s", name))
 }
 
-func (m *MemRepository) Delete(task Task) {
+func (m *MemRepository) Delete(task Task) error {
 	idx := -1
 	for i, v := range m.tasks {
 		if v.Name == task.Name {
@@ -207,6 +207,7 @@ func (m *MemRepository) Delete(task Task) {
 			m.tasks = m.tasks[:len(m.tasks)-1]
 		}
 	}
+	return nil
 }
 
 func (m *MemRepository) nextId() uint64 {

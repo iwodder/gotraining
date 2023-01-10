@@ -21,7 +21,7 @@ type TaskRepository interface {
 	LoadAll() []Task
 	Update(task Task) Task
 	Load(name string) (*Task, error)
-	Delete(task Task)
+	Delete(task Task) error
 }
 
 func NewTaskManager(t TaskRepository) *TaskManager {
@@ -56,8 +56,8 @@ func (tm *TaskManager) Complete(task Task) *Task {
 	return &t
 }
 
-func (tm *TaskManager) Remove(name string) {
-	tm.repo.Delete(Task{Name: name})
+func (tm *TaskManager) Remove(name string) error {
+	return tm.repo.Delete(Task{Name: name})
 }
 
 func (tm *TaskManager) ListCompletedTasks(hrs int) ([]Task, error) {

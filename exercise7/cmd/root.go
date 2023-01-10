@@ -32,6 +32,7 @@ var (
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal("Unable to execute, ", err)
+		fmt.Println("Unable to execute, ", err)
+		os.Exit(1)
 	}
 }

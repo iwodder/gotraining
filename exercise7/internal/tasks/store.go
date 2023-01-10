@@ -95,11 +95,15 @@ func (b *BoltRepository) Load(name string) (*Task, error) {
 	return &t, nil
 }
 
-func (b *BoltRepository) Delete(task Task) {
-	b.db.Update(func(tx *bolt.Tx) error {
+func (b *BoltRepository) Delete(task Task) error {
+	err := b.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("tasks"))
 		return b.Delete([]byte(task.Name))
 	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func getDb(db string) (*bolt.DB, error) {

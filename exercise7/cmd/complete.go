@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"log"
+	"os"
 )
 
 var (
@@ -14,7 +14,8 @@ var (
 			time, _ := cmd.Flags().GetInt("time")
 			tasks, err := taskManager.ListCompletedTasks(time)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("Unable to list all tasks", err)
+				os.Exit(1)
 			}
 			fmt.Println("===Completed Tasks===")
 			for i, v := range tasks {
