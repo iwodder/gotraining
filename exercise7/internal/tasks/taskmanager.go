@@ -1,6 +1,9 @@
 package tasks
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Task struct {
 	Name           string
@@ -55,4 +58,28 @@ func (tm *TaskManager) Complete(task Task) *Task {
 
 func (tm *TaskManager) Remove(name string) {
 	tm.repo.Delete(Task{Name: name})
+}
+
+func (tm *TaskManager) ListCompletedTasks(hrs int) ([]Task, error) {
+	if isInvalid(hrs) {
+		return nil, errors.New("invalid period selected, must be 24, 12, or 6")
+	}
+	tasks := tm.repo.LoadAll()
+	var ret []Task
+	currentTime := time.Now()
+	for _, v := range tasks {
+		diff := currentTime.Sub(v.CompletionDate)
+		if diff < time.Duration(hrs)*time.Hour {
+			ret = append(ret, v)
+		}
+	}
+
+	return ret, nil
+}
+
+func isInvalid(hrs int) bool {
+	if hrs == 24 || hrs == 12 || hrs == 6 {
+		return false
+	}
+	return true
 }

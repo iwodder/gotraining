@@ -18,6 +18,13 @@ func setup(t *testing.T) {
 	}
 }
 
+func assertEqualCompletionDate(t *testing.T, date time.Time) {
+	year, month, day := time.Now().Date()
+	assert.Equalf(t, day, date.Day(), "Expected matching day, wanted %d, got %d", day, date.Day())
+	assert.Equalf(t, month, date.Month(), "Expected matching month, wanted %d, got %d", month, date.Month())
+	assert.Equalf(t, year, date.Year(), "Expected matching year, wanted %d, got %d", year, date.Year())
+}
+
 func Test_CreateTask(t *testing.T) {
 	setup(t)
 
@@ -61,13 +68,6 @@ func Test_CompleteTask(t *testing.T) {
 	assertEqualCompletionDate(t, task.CompletionDate)
 }
 
-func assertEqualCompletionDate(t *testing.T, date time.Time) {
-	year, month, day := time.Now().Date()
-	assert.Equalf(t, day, date.Day(), "Expected matching day, wanted %d, got %d", day, date.Day())
-	assert.Equalf(t, month, date.Month(), "Expected matching month, wanted %d, got %d", month, date.Month())
-	assert.Equalf(t, year, date.Year(), "Expected matching year, wanted %d, got %d", year, date.Year())
-}
-
 func Test_RemoveTask(t *testing.T) {
 	setup(t)
 	tm.CreateTask("build app", "create the task manager app")
@@ -77,6 +77,75 @@ func Test_RemoveTask(t *testing.T) {
 	_, err := tm.GetTask("build app")
 
 	assert.Equal(t, "Unable to locate a task with name build app", err.Error())
+}
+
+func Test_ListCompletedTasks(t *testing.T) {
+	tm = TaskManager{
+		repo: &MemRepository{
+			tasks: []Task{
+				{
+					Name:           "Task 1",
+					Description:    "Task Description",
+					Complete:       true,
+					CompletionDate: time.Now(),
+				},
+				{
+					Name:           "Task 2",
+					Description:    "Task Description",
+					Complete:       true,
+					CompletionDate: time.Now(),
+				},
+				{
+					Name:           "Task 3",
+					Description:    "Task Description",
+					Complete:       true,
+					CompletionDate: time.Now().Add(time.Duration(-8) * time.Hour),
+				},
+				{
+					Name:           "Task 4",
+					Description:    "Task Description",
+					Complete:       true,
+					CompletionDate: time.Now().Add(time.Duration(-15) * time.Hour),
+				},
+				{
+					Name:           "Task 5",
+					Description:    "Task Description",
+					Complete:       true,
+					CompletionDate: time.Now().Add(time.Duration(-25) * time.Hour),
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name string
+		want int
+		args int
+	}{
+		{
+			name: "Can load tasks completed today",
+			want: 4,
+			args: 24,
+		},
+		{
+			name: "Can load tasks completed in last 12hrs",
+			want: 3,
+			args: 12,
+		},
+		{
+			name: "Can load tasks completed in last 1 hr",
+			want: 2,
+			args: 6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tasks, _ := tm.ListCompletedTasks(tt.args)
+			assert.Equalf(t, tt.want, len(tasks), "Expected to find %d tasks, got %d", tt.want, len(tasks))
+		})
+	}
+
 }
 
 type MemRepository struct {
