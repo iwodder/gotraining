@@ -73,8 +73,6 @@ func loadRecords(cxn *sql.DB) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("loadRecords: %w", err)
 	}
-	defer rows.Close()
-
 	var ret []string
 	for rows.Next() {
 		var num string
@@ -82,7 +80,7 @@ func loadRecords(cxn *sql.DB) ([]string, error) {
 			ret = append(ret, num)
 		}
 	}
-	return ret, nil
+	return ret, rows.Close()
 }
 
 func normalizePhoneNumbers(numbers []string) []phoneNumber {
@@ -117,14 +115,23 @@ func processNumber(cxn *sql.DB, num phoneNumber) error {
 	}
 	if cnt == 0 {
 		return updateRecord(cxn, num)
+	} else {
+		return deleteRecord(cxn, num)
 	}
-	return nil
 }
 
 func updateRecord(cxn *sql.DB, num phoneNumber) error {
 	_, err := cxn.Exec(`UPDATE phone_numbers SET number=$1 WHERE number=$2`, num.newFmt, num.oldFmt)
 	if err != nil {
 		return fmt.Errorf("updateRecord: %w", err)
+	}
+	return nil
+}
+
+func deleteRecord(cxn *sql.DB, num phoneNumber) error {
+	_, err := cxn.Exec(`DELETE FROM phone_numbers WHERE number=$1`, num.oldFmt)
+	if err != nil {
+		return fmt.Errorf("deleteRecord: %w", err)
 	}
 	return nil
 }
