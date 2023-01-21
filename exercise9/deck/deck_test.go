@@ -6,69 +6,45 @@ import (
 	"testing"
 )
 
-var defaultCardDeck = []Card{
-	{Clubs, Ace},
-	{Clubs, Two},
-	{Clubs, Three},
-	{Clubs, Four},
-	{Clubs, Five},
-	{Clubs, Six},
-	{Clubs, Seven},
-	{Clubs, Eight},
-	{Clubs, Nine},
-	{Clubs, Ten},
-	{Clubs, Jack},
-	{Clubs, Queen},
-	{Clubs, King},
-	{Diamonds, Ace},
-	{Diamonds, Two},
-	{Diamonds, Three},
-	{Diamonds, Four},
-	{Diamonds, Five},
-	{Diamonds, Six},
-	{Diamonds, Seven},
-	{Diamonds, Eight},
-	{Diamonds, Nine},
-	{Diamonds, Ten},
-	{Diamonds, Jack},
-	{Diamonds, Queen},
-	{Diamonds, King},
-	{Hearts, Ace},
-	{Hearts, Two},
-	{Hearts, Three},
-	{Hearts, Four},
-	{Hearts, Five},
-	{Hearts, Six},
-	{Hearts, Seven},
-	{Hearts, Eight},
-	{Hearts, Nine},
-	{Hearts, Ten},
-	{Hearts, Jack},
-	{Hearts, Queen},
-	{Hearts, King},
-	{Spades, Ace},
-	{Spades, Two},
-	{Spades, Three},
-	{Spades, Four},
-	{Spades, Five},
-	{Spades, Six},
-	{Spades, Seven},
-	{Spades, Eight},
-	{Spades, Nine},
-	{Spades, Ten},
-	{Spades, Jack},
-	{Spades, Queen},
-	{Spades, King},
-}
-
 func Test_PrintsString(t *testing.T) {
-	c := Card{Hearts, Ace}
-
-	assert.Equal(t, "Ace of Hearts", fmt.Sprintf("%s", c))
+	tests := []struct {
+		name string
+		arg  Card
+	}{
+		{
+			"Ace of Hearts",
+			Card{Hearts, Ace},
+		},
+		{
+			"Two of Clubs",
+			Card{Clubs, Two},
+		},
+		{
+			"Joker",
+			Card{Any, Joker},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.name, fmt.Sprintf("%s", tt.arg))
+		})
+	}
 }
 
 func Test_DefaultDeckIsOrdered(t *testing.T) {
-	assert.Equal(t, defaultCardDeck, New())
+	assertDeckHasDefaultOrder := func(t *testing.T, d []Card) {
+		deckIdx := 0
+		for _, s := range suits {
+			for _, v := range values {
+				assert.Equal(t, d[deckIdx], Card{Suit: s, Value: v}, "New deck should have default order")
+				deckIdx++
+			}
+		}
+	}
+	d := New()
+
+	assert.Equal(t, 52, len(d), "New deck should have 52 cards")
+	assertDeckHasDefaultOrder(t, d)
 }
 
 func Test_CanFilterCards(t *testing.T) {
@@ -82,8 +58,9 @@ func Test_CanFilterCards(t *testing.T) {
 
 func Test_CanShuffleStartingDeck(t *testing.T) {
 	d := New(Shuffle)
+	d1 := New()
 
-	assert.NotEqual(t, d, defaultCardDeck)
+	assert.NotEqual(t, d, d1)
 }
 
 func Test_MakeMultipleDecks(t *testing.T) {
@@ -102,4 +79,10 @@ func Test_CanAddJokers(t *testing.T) {
 
 	assert.Equal(t, exp, d[len(d)-1])
 	assert.Equal(t, exp, d[len(d)-2])
+}
+
+func Test_DefaultSort(t *testing.T) {
+	d := New(Sort(DefaultSort))
+
+	assert.Equal(t, Card{Suit: Clubs, Value: Ace}, d[0])
 }

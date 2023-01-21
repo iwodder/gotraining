@@ -3,6 +3,7 @@ package deck
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"time"
 )
 
@@ -20,7 +21,6 @@ type Value int
 
 const (
 	Ace Value = iota
-	One
 	Two
 	Three
 	Four
@@ -44,20 +44,15 @@ var (
 		rand.Shuffle(len(d), func(i, j int) { d[i], d[j] = d[j], d[i] })
 		return d
 	}
-)
-
-type Reverse []Card
-
-func (r Reverse) Less(i, j int) bool {
-	if r[i].Value < r[j].Value {
-		return true
+	DefaultSort = func(c []Card) func(i, j int) bool {
+		return func(i, j int) bool {
+			if c[i].Value == c[j].Value {
+				return c[i].Suit < c[j].Suit
+			}
+			return c[i].Value < c[j].Value
+		}
 	}
-	return r[i].Suit < r[j].Suit
-}
-
-func (r Reverse) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
-
-func (r Reverse) Len() int { return len(r) }
+)
 
 type Card struct {
 	Suit
@@ -85,6 +80,9 @@ func defaultDeck() []Card {
 }
 
 func (c Card) String() string {
+	if c.Value == Joker {
+		return "Joker"
+	}
 	return fmt.Sprintf("%s of %s", c.Value, c.Suit)
 }
 
@@ -116,6 +114,13 @@ func Jokers(n int) Opt {
 			c = append(c, Card{Any, Joker})
 		}
 		return c
+	}
+}
+
+func Sort(f func([]Card) func(i, j int) bool) Opt {
+	return func(cards []Card) []Card {
+		sort.Slice(cards, f(cards))
+		return cards
 	}
 }
 
