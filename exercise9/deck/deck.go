@@ -20,7 +20,7 @@ const (
 type Value int
 
 const (
-	Ace Value = iota
+	Ace Value = iota + 1
 	Two
 	Three
 	Four
