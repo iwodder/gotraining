@@ -7,15 +7,7 @@ import (
 )
 
 type MockPlayer struct {
-	hand []deck.Card
-}
-
-func (m *MockPlayer) HandCard(c deck.Card) {
-	m.hand = append(m.hand, c)
-}
-
-func (m *MockPlayer) TellScore(score int) {
-
+	prompts []string
 }
 
 func (m *MockPlayer) NextMove() string {
@@ -23,7 +15,7 @@ func (m *MockPlayer) NextMove() string {
 }
 
 func (m *MockPlayer) Prompt(s string) {
-
+	m.prompts = append(m.prompts, s)
 }
 
 func Test_CreateNewGame(t *testing.T) {
@@ -34,11 +26,10 @@ func Test_CreateNewGame(t *testing.T) {
 }
 
 func Test_DealsCards(t *testing.T) {
-	p := MockPlayer{}
-	g := New(&p)
+	g := New(&MockPlayer{})
 	_ = Deal(g)
 
-	assert.Equal(t, 2, len(p.hand))
+	assert.Equal(t, 2, len(g.players[0].hand))
 }
 
 func Test_Scoring(t *testing.T) {
@@ -96,6 +87,11 @@ func Test_Scoring(t *testing.T) {
 			name:  "Ace, Ace, King, Five is 17",
 			hand:  []deck.Card{{deck.Spades, deck.Ace}, {deck.Spades, deck.Ace}, {deck.Clubs, deck.King}, {deck.Clubs, deck.Five}},
 			score: 17,
+		},
+		{
+			name:  "Ace, Jack is 21",
+			hand:  []deck.Card{{deck.Spades, deck.Ace}, {deck.Clubs, deck.Jack}},
+			score: 21,
 		},
 	}
 	for _, tt := range tests {
