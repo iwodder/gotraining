@@ -6,30 +6,54 @@ import (
 	"testing"
 )
 
-type MockPlayer struct {
+type TestPrompter struct {
 	prompts []string
 }
 
-func (m *MockPlayer) NextMove() string {
-	return "s"
-}
-
-func (m *MockPlayer) Prompt(s string) {
+func (m *TestPrompter) Prompt(s string) {
 	m.prompts = append(m.prompts, s)
 }
 
+func (m *TestPrompter) Response() string {
+	return "s"
+}
+
 func Test_CreateNewGame(t *testing.T) {
-	g := New(&MockPlayer{})
+	g := NewGame(NewPlayer(&TestPrompter{}))
 
 	assert.NotNil(t, g)
 	assert.Equal(t, 1, len(g.players))
 }
 
 func Test_DealsCards(t *testing.T) {
-	g := New(&MockPlayer{})
+	p := NewPlayer(&TestPrompter{})
+	g := NewGame(p)
 	_ = Deal(g)
 
-	assert.Equal(t, 2, len(g.players[0].hand))
+	assert.Equal(t, 2, len(p.hand))
+}
+
+func Test_PlayerTurn(t *testing.T) {
+	spy := &TestPrompter{}
+	p := NewPlayer(spy)
+	g := NewGame(p)
+
+	PlayerTurn(g)
+
+	assert.Contains(t, spy.prompts, "Do you want to (h)it or (s)tand?")
+}
+
+func Test_DetermineWinners(t *testing.T) {
+
+	spy := &TestPrompter{}
+	p := NewPlayer(spy)
+	g := NewGame(p)
+
+	p.hand = []deck.Card{{deck.Clubs, deck.Ace}, {deck.Hearts, deck.Jack}}
+
+	DetermineWinners(12)(g)
+
+	assert.Contains(t, spy.prompts, "You won!")
 }
 
 func Test_Scoring(t *testing.T) {

@@ -5,20 +5,20 @@ import (
 	"gotraining/exercise10/blackjack"
 )
 
-type HumanPlayer struct{}
+type CliPrompt struct{}
 
-func (h *HumanPlayer) Prompt(s string) {
+func (h *CliPrompt) Prompt(s string) {
 	fmt.Println(s)
 }
 
-func (h *HumanPlayer) NextMove() string {
-	var ret string
+func (h *CliPrompt) Response() string {
 	fmt.Printf("> ")
-	_, _ = fmt.Scanf("%s\n", &ret)
+	var ret string
+	fmt.Scanf("%s\n", &ret)
 	return ret
 }
 
 func main() {
-	g := blackjack.New(&HumanPlayer{})
-	g.Play()
+	g := blackjack.NewGame(blackjack.NewPlayer(&CliPrompt{}))
+	g.Play(10)
 }
