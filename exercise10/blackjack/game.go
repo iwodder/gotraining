@@ -3,17 +3,15 @@ package blackjack
 import (
 	"fmt"
 	"gotraining/exercise9/deck"
-	"strings"
 )
 
 type GameState func(*Game) GameState
 
 type Game struct {
-	deck       []deck.Card
-	dealerHand []deck.Card
-	players    []*Player
-	playerIdx  int
-	rounds     int
+	deck      []deck.Card
+	dealer    Hand
+	players   []*Player
+	playerIdx int
 }
 
 func NewGame(players ...*Player) *Game {
@@ -25,43 +23,40 @@ func NewGame(players ...*Player) *Game {
 }
 
 func (g *Game) Play(rounds int) {
-	g.rounds = rounds
-	for state := Deal(g); state != nil; {
-		state = state(g)
+	for ; rounds > 0; rounds-- {
+		for state := Deal(g); state != nil; {
+			state = state(g)
+		}
+		g.reset()
 	}
 }
 
 func Deal(g *Game) GameState {
 	for i := 0; i < 2; i++ {
 		for _, p := range g.players {
-			p.acceptCard(g.draw())
+			p.giveCard(g.draw())
 		}
-		g.dealerHand = append(g.dealerHand, g.draw())
+		g.dealer = append(g.dealer, g.draw())
 	}
 	for _, p := range g.players {
-		p.Prompt(fmt.Sprintf("Dealer Hand=%s,**HIDDEN**", g.dealerHand[0]))
-		p.showHand()
+		p.Prompt(fmt.Sprintf("Dealer Hand=**HIDDEN**, %s", g.dealer[0]))
 	}
 	return PlayerTurn
 }
 
 func PlayerTurn(g *Game) GameState {
 	if p := g.nextPlayer(); p != nil {
-		pScore := p.scoreHand(score)
-		for stand := false; pScore < 21 && !stand; pScore = p.scoreHand(score) {
+		stand := false
+		for s := p.Score(); s < 21 && !stand; s = p.Score() {
 			p.Prompt("Do you want to (h)it or (s)tand?")
 			switch p.Response() {
 			case "h":
-				p.acceptCard(g.draw())
-				p.showHand()
+				p.giveCard(g.draw())
 			case "s":
 				stand = true
 			default:
 				p.Prompt("Unknown action, must be either (h)it or (s)tand.")
 			}
-		}
-		if pScore > 21 {
-			p.bust()
 		}
 		return PlayerTurn
 	}
@@ -76,53 +71,41 @@ func DealerTurn(g *Game) GameState {
 		return has(d, deck.Ace) && has(d, deck.Six)
 	}
 
-	dScore := score(g.dealerHand)
-	for ; dScore <= 16 || soft17(g.dealerHand); dScore = score(g.dealerHand) {
-		g.dealerHand = append(g.dealerHand, g.draw())
-		var dHand []string
-		for _, card := range g.dealerHand {
-			dHand = append(dHand, card.String())
-		}
-		hand := strings.Join(dHand, ", ")
+	for _, p := range g.players {
+		p.Prompt(fmt.Sprintf("Dealer Hand=%s", g.dealer))
+	}
+	for dScore := g.dealer.score(); dScore <= 16 || soft17(g.dealer); dScore = g.dealer.score() {
+		g.dealer = append(g.dealer, g.draw())
 		for _, p := range g.players {
-			p.Prompt(fmt.Sprintf("Dealer Hand=%s", hand))
+			p.Prompt(fmt.Sprintf("Dealer Hand=%s", g.dealer))
 		}
 	}
-	return DetermineWinners(dScore)
+	return DetermineWinners
 }
 
-func DetermineWinners(dealerScore int) GameState {
-	return func(g *Game) GameState {
-		for _, player := range g.players {
-			playerScore := player.scoreHand(score)
-			switch {
-			case playerScore > 21:
-			case dealerScore > 21:
-				player.Prompt("Dealer busted! You win!")
-			case playerScore > dealerScore:
-				player.winner()
-			case playerScore < dealerScore:
-				player.loser()
-			case playerScore == dealerScore:
-				player.Prompt("Draw")
-			}
+func DetermineWinners(g *Game) GameState {
+	dealerScore := g.dealer.score()
+	for _, player := range g.players {
+		playerScore := player.Score()
+		switch {
+		case playerScore > 21:
+			player.Bust()
+		case dealerScore > 21:
+			player.Prompt("Dealer busted! You win!")
+		case playerScore > dealerScore:
+			player.Won()
+		case playerScore < dealerScore:
+			player.Lost()
+		case playerScore == dealerScore:
+			player.Draw()
 		}
-		return PlayAgain
-	}
-}
-
-func PlayAgain(g *Game) GameState {
-	g.rounds--
-	if g.rounds > 1 {
-		g.reset()
-		return Deal
 	}
 	return nil
 }
 
 func (g *Game) reset() {
 	g.playerIdx = 0
-	g.dealerHand = nil
+	g.dealer = nil
 	for _, p := range g.players {
 		p.clearHand()
 	}
@@ -141,29 +124,4 @@ func (g *Game) nextPlayer() *Player {
 	next := g.players[g.playerIdx]
 	g.playerIdx++
 	return next
-}
-
-func score(hand []deck.Card) int {
-	return scoreIter(hand, 0)
-}
-
-func scoreIter(hand []deck.Card, acc int) int {
-	if len(hand) == 0 {
-		return acc
-	}
-
-	card := hand[0]
-	switch card.Value {
-	case deck.Ace:
-		s := scoreIter(hand[1:], acc+11)
-		if s <= 21 {
-			return s
-		} else {
-			return scoreIter(hand[1:], acc+1)
-		}
-	case deck.Jack, deck.Queen, deck.King:
-		return scoreIter(hand[1:], acc+10)
-	default:
-		return scoreIter(hand[1:], acc+int(card.Value))
-	}
 }

@@ -20,5 +20,5 @@ func (h *CliPrompt) Response() string {
 
 func main() {
 	g := blackjack.NewGame(blackjack.NewPlayer(&CliPrompt{}))
-	g.Play(10)
+	g.Play(1)
 }

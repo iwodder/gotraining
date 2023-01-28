@@ -48,10 +48,10 @@ func Test_DetermineWinners(t *testing.T) {
 	spy := &TestPrompter{}
 	p := NewPlayer(spy)
 	g := NewGame(p)
-
+	g.dealer = []deck.Card{{deck.Clubs, deck.Two}, {deck.Hearts, deck.Jack}}
 	p.hand = []deck.Card{{deck.Clubs, deck.Ace}, {deck.Hearts, deck.Jack}}
 
-	DetermineWinners(12)(g)
+	DetermineWinners(g)
 
 	assert.Contains(t, spy.prompts, "You won!")
 }
@@ -59,7 +59,7 @@ func Test_DetermineWinners(t *testing.T) {
 func Test_Scoring(t *testing.T) {
 	tests := []struct {
 		name  string
-		hand  []deck.Card
+		hand  Hand
 		score int
 	}{
 		{
@@ -120,7 +120,7 @@ func Test_Scoring(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.score, score(tt.hand))
+			assert.Equal(t, tt.score, tt.hand.score())
 		})
 	}
 }
