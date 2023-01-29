@@ -2,90 +2,45 @@ package blackjack
 
 import (
 	"fmt"
-	"gotraining/exercise9/deck"
-	"strings"
+	"io"
 )
 
-type Hand []deck.Card
+type CliPlayer struct {
+	out io.Writer
+	in  io.Reader
+}
 
-func (h Hand) String() string {
-	var ret []string
-	for _, v := range h {
-		ret = append(ret, v.String())
+func (c *CliPlayer) ShowHand(h Hand) {
+	_, _ = fmt.Fprintf(c.out, "Your hand=%s, (Score=%d)\n", h, h.score())
+}
+
+func (c *CliPlayer) Action(action ...Action) Action {
+	_, _ = fmt.Fprintln(c.out, "What do you want to do?")
+	for i, v := range action {
+		_, _ = fmt.Fprintf(c.out, "\t %d) %s\n", i+1, v)
 	}
-	return strings.Join(ret, ", ")
+	var opt int
+	_, _ = fmt.Fprintf(c.out, "> ")
+	_, _ = fmt.Fscanf(c.in, "%d\n", &opt)
+	return action[opt-1]
 }
 
-func (h Hand) score() int {
-	return scoreIter(h, 0)
+func (c *CliPlayer) Prompt(msg string) {
+	_, _ = fmt.Fprintln(c.out, msg)
 }
 
-func scoreIter(hand []deck.Card, acc int) int {
-	if len(hand) == 0 {
-		return acc
-	}
-	card := hand[0]
-	switch card.Value {
-	case deck.Ace:
-		s := scoreIter(hand[1:], acc+11)
-		if s <= 21 {
-			return s
-		} else {
-			return scoreIter(hand[1:], acc+1)
-		}
-	case deck.Jack, deck.Queen, deck.King:
-		return scoreIter(hand[1:], acc+10)
-	default:
-		return scoreIter(hand[1:], acc+int(card.Value))
-	}
+func (c *CliPlayer) Win() {
+	_, _ = fmt.Fprintln(c.out, "You won!")
 }
 
-type Player struct {
-	hand Hand
-	Prompter
+func (c *CliPlayer) Lose() {
+	_, _ = fmt.Fprintln(c.out, "You lost.")
 }
 
-type Prompter interface {
-	Prompt(s string)
-	Response() string
+func (c *CliPlayer) Draw() {
+	_, _ = fmt.Fprintln(c.out, "Draw.")
 }
 
-func NewPlayer(p Prompter) *Player {
-	ret := Player{
-		Prompter: p,
-	}
-	return &ret
-}
-
-func (p *Player) giveCard(c deck.Card) {
-	p.hand = append(p.hand, c)
-	p.ShowHand()
-}
-
-func (p *Player) clearHand() {
-	p.hand = nil
-}
-
-func (p *Player) ShowHand() {
-	p.Prompt(fmt.Sprintf("Your hand=%s", p.hand))
-}
-
-func (p *Player) Won() {
-	p.Prompt("You won!")
-}
-
-func (p *Player) Lost() {
-	p.Prompt("You lose, better luck next time!")
-}
-
-func (p *Player) Bust() {
-	p.Prompt("Bust, you lose!")
-}
-
-func (p *Player) Score() int {
-	return p.hand.score()
-}
-
-func (p *Player) Draw() {
-	p.Prompt("Draw")
+func (c *CliPlayer) Bust() {
+	_, _ = fmt.Fprintln(c.out, "Bust, you lose.")
 }

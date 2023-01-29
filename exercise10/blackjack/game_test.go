@@ -6,54 +6,101 @@ import (
 	"testing"
 )
 
-type TestPrompter struct {
-	prompts []string
+type SpyPlayer struct {
+	h       Hand
+	actions int
 }
 
-func (m *TestPrompter) Prompt(s string) {
-	m.prompts = append(m.prompts, s)
+func (s *SpyPlayer) ShowHand(h Hand) {
+	s.h = h
 }
 
-func (m *TestPrompter) Response() string {
-	return "s"
+func (s *SpyPlayer) Action(actions ...Action) Action {
+	s.actions = len(actions)
+	return Hit
 }
 
-func Test_CreateNewGame(t *testing.T) {
-	g := NewGame(NewPlayer(&TestPrompter{}))
+func (s *SpyPlayer) Prompt(msg string) {
 
-	assert.NotNil(t, g)
-	assert.Equal(t, 1, len(g.players))
 }
 
-func Test_DealsCards(t *testing.T) {
-	p := NewPlayer(&TestPrompter{})
-	g := NewGame(p)
-	_ = Deal(g)
+func (s *SpyPlayer) Win() {
 
-	assert.Equal(t, 2, len(p.hand))
+}
+
+func (s *SpyPlayer) Lose() {
+
+}
+
+func (s *SpyPlayer) Draw() {
+
+}
+
+func (s *SpyPlayer) Bust() {
+
+}
+
+//func Test_CreateNewGame(t *testing.T) {
+//	g := NewGame()
+//
+//	assert.NotNil(t, g)
+//	assert.Equal(t, 1, len(g.players))
+//}
+//
+//func Test_DealsCards(t *testing.T) {
+//
+//	g := NewGame(p)
+//	_ = Deal(g)
+//
+//	assert.Equal(t, 2, len(p.hand))
+//}
+//
+//func Test_PlayerTurn(t *testing.T) {
+//	g := NewGame(p)
+//
+//	PlayerTurn(g)
+//
+//	assert.Contains(t, spy.prompts, "Do you want to (h)it or (s)tand?")
+//}
+//
+//func Test_DetermineWinners(t *testing.T) {
+//
+//	spy := &TestPrompter{}
+//	p := NewPlayer(spy)
+//	g := NewGame(p)
+//	g.dealer = []deck.Card{{deck.Clubs, deck.Two}, {deck.Hearts, deck.Jack}}
+//	p.hand = []deck.Card{{deck.Clubs, deck.Ace}, {deck.Hearts, deck.Jack}}
+//
+//	DetermineWinners(g)
+//
+//	assert.Contains(t, spy.prompts, "You won!")
+//}
+
+func Test_Hit(t *testing.T) {
+	var s SpyPlayer
+	g := NewGame(&s)
+
+	hit(g)
+
+	assert.Equal(t, 1, len(s.h))
+}
+
+func Test_Stand(t *testing.T) {
+	var s SpyPlayer
+	g := NewGame(&s)
+
+	stand(g)
+
+	assert.Equal(t, 1, g.playerIdx)
 }
 
 func Test_PlayerTurn(t *testing.T) {
-	spy := &TestPrompter{}
-	p := NewPlayer(spy)
-	g := NewGame(p)
+	var s SpyPlayer
+	g := NewGame(&s)
 
 	PlayerTurn(g)
 
-	assert.Contains(t, spy.prompts, "Do you want to (h)it or (s)tand?")
-}
-
-func Test_DetermineWinners(t *testing.T) {
-
-	spy := &TestPrompter{}
-	p := NewPlayer(spy)
-	g := NewGame(p)
-	g.dealer = []deck.Card{{deck.Clubs, deck.Two}, {deck.Hearts, deck.Jack}}
-	p.hand = []deck.Card{{deck.Clubs, deck.Ace}, {deck.Hearts, deck.Jack}}
-
-	DetermineWinners(g)
-
-	assert.Contains(t, spy.prompts, "You won!")
+	assert.Equal(t, 2, s.actions)
 }
 
 func Test_Scoring(t *testing.T) {

@@ -1,54 +1,62 @@
 package blackjack
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gotraining/exercise9/deck"
+	"strings"
 	"testing"
 )
 
-type StringPrompter struct {
-	prompt string
+func TestCliPlayer_ShowHand(t *testing.T) {
+	var sb strings.Builder
+	c := CliPlayer{out: &sb}
+
+	c.ShowHand([]deck.Card{{deck.Hearts, deck.Ace}})
+
+	assert.Equal(t, "Your hand=Ace of Hearts, (Score=11)\n", sb.String())
 }
 
-func (sp *StringPrompter) Prompt(s string) {
-	sp.prompt = s
+func TestCliPlayer_Prompt(t *testing.T) {
+	var sb strings.Builder
+	c := CliPlayer{out: &sb}
+
+	c.Prompt("")
+
+	assert.Equal(t, "\n", sb.String())
 }
 
-func (sp *StringPrompter) Response() string {
-	return ""
+func TestCliPlayer_Win(t *testing.T) {
+	var sb strings.Builder
+	c := CliPlayer{out: &sb}
+
+	c.Win()
+
+	assert.Equal(t, "You won!\n", sb.String())
 }
 
-func Test_PlayerLoses(t *testing.T) {
-	sp := &StringPrompter{}
-	p := Player{
-		Prompter: sp,
-	}
+func TestCliPlayer_Lose(t *testing.T) {
+	var sb strings.Builder
+	c := CliPlayer{out: &sb}
 
-	p.Lost()
+	c.Lose()
 
-	assert.Equal(t, "You lose, better luck next time!", sp.prompt)
+	assert.Equal(t, "You lost.\n", sb.String())
 }
 
-func Test_PlayerDraw(t *testing.T) {
-	sp := &StringPrompter{}
-	p := Player{
-		Prompter: sp,
-	}
+func TestCliPlayer_Draw(t *testing.T) {
+	var sb strings.Builder
+	c := CliPlayer{out: &sb}
 
-	p.Draw()
+	c.Draw()
 
-	assert.Equal(t, "Draw", sp.prompt)
+	assert.Equal(t, "Draw.\n", sb.String())
 }
 
-func Test_acceptCardDisplaysHand(t *testing.T) {
-	sp := &StringPrompter{}
-	p := Player{
-		Prompter: sp,
-	}
+func TestCliPlayer_Bust(t *testing.T) {
+	var sb strings.Builder
+	c := CliPlayer{out: &sb}
 
-	hand := Hand([]deck.Card{{Suit: deck.Hearts, Value: deck.Ace}})
-	p.giveCard(deck.Card{Suit: deck.Hearts, Value: deck.Ace})
+	c.Bust()
 
-	assert.Equal(t, fmt.Sprintf("Your hand=%s", hand), sp.prompt)
+	assert.Equal(t, "Bust, you lose.\n", sb.String())
 }
