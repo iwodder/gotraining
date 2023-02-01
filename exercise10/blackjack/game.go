@@ -7,8 +7,8 @@ import (
 )
 
 func init() {
-	Hit = Action{name: "Hit", gs: hit}
-	Stand = Action{name: "Stand", gs: stand}
+	Hit = Action{Name: "Hit", gs: hit}
+	Stand = Action{Name: "Stand", gs: stand}
 }
 
 var (
@@ -17,12 +17,12 @@ var (
 )
 
 type Action struct {
-	name string
+	Name string
 	gs   GameState
 }
 
 func (a Action) String() string {
-	return a.name
+	return a.Name
 }
 
 type Player interface {
@@ -100,7 +100,15 @@ func (g *Game) Play(rounds int) {
 	}
 }
 
+func Shuffle(g *Game) GameState {
+	g.deck = append(g.deck, deck.New(deck.Quantity(3), deck.Shuffle)...)
+	return Deal
+}
+
 func Deal(g *Game) GameState {
+	if len(g.deck) < 10 {
+		return Shuffle
+	}
 	for i := 0; i < 2; i++ {
 		for _, p := range g.players {
 			p.hand = append(p.hand, g.draw())
@@ -128,7 +136,6 @@ func hit(g *Game) GameState {
 	p.hand = append(p.hand, g.draw())
 	p.ShowHand(p.hand)
 	if p.hand.score() > 21 {
-		p.Bust()
 		g.playerIdx++
 	}
 	return PlayerTurn
@@ -168,6 +175,7 @@ func DetermineWinners(g *Game) GameState {
 			player.Bust()
 		case dealerScore > 21:
 			player.Prompt("Dealer busted! You win!")
+			player.Win()
 		case playerScore > dealerScore:
 			player.Win()
 		case playerScore < dealerScore:

@@ -9,7 +9,7 @@ import (
 
 func TestCliPlayer_ShowHand(t *testing.T) {
 	var sb strings.Builder
-	c := CliPlayer{out: &sb}
+	c := CliPlayer{Out: &sb}
 
 	c.ShowHand([]deck.Card{{deck.Hearts, deck.Ace}})
 
@@ -18,7 +18,7 @@ func TestCliPlayer_ShowHand(t *testing.T) {
 
 func TestCliPlayer_Prompt(t *testing.T) {
 	var sb strings.Builder
-	c := CliPlayer{out: &sb}
+	c := CliPlayer{Out: &sb}
 
 	c.Prompt("")
 
@@ -27,7 +27,7 @@ func TestCliPlayer_Prompt(t *testing.T) {
 
 func TestCliPlayer_Win(t *testing.T) {
 	var sb strings.Builder
-	c := CliPlayer{out: &sb}
+	c := CliPlayer{Out: &sb}
 
 	c.Win()
 
@@ -36,7 +36,7 @@ func TestCliPlayer_Win(t *testing.T) {
 
 func TestCliPlayer_Lose(t *testing.T) {
 	var sb strings.Builder
-	c := CliPlayer{out: &sb}
+	c := CliPlayer{Out: &sb}
 
 	c.Lose()
 
@@ -45,7 +45,7 @@ func TestCliPlayer_Lose(t *testing.T) {
 
 func TestCliPlayer_Draw(t *testing.T) {
 	var sb strings.Builder
-	c := CliPlayer{out: &sb}
+	c := CliPlayer{Out: &sb}
 
 	c.Draw()
 
@@ -54,9 +54,18 @@ func TestCliPlayer_Draw(t *testing.T) {
 
 func TestCliPlayer_Bust(t *testing.T) {
 	var sb strings.Builder
-	c := CliPlayer{out: &sb}
+	c := CliPlayer{Out: &sb}
 
 	c.Bust()
 
 	assert.Equal(t, "Bust, you lose.\n", sb.String())
+}
+
+func TestCliPlayer_PerformsAction(t *testing.T) {
+	var sb strings.Builder
+	c := CliPlayer{Out: &sb, In: strings.NewReader("1\n")}
+
+	c.Action(Hit)
+	exp := "What do you want to do?\n\t1) Hit\n> "
+	assert.Equal(t, exp, sb.String())
 }
