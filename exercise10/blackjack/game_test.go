@@ -11,94 +11,26 @@ type SpyPlayer struct {
 	actions int
 }
 
-func (s *SpyPlayer) ShowHand(h Hand) {
-	s.h = h
-}
-
-func (s *SpyPlayer) Action(actions ...Action) Action {
+func (s *SpyPlayer) Action(hand Hand, dealer deck.Card, actions ...Action) Action {
+	s.h = hand
 	s.actions = len(actions)
-	return Hit
+	return ActionHit
 }
 
 func (s *SpyPlayer) Prompt(msg string) {
 
 }
 
-func (s *SpyPlayer) Win() {
+func (s *SpyPlayer) Result(r Result) {
 
-}
-
-func (s *SpyPlayer) Lose() {
-
-}
-
-func (s *SpyPlayer) Draw() {
-
-}
-
-func (s *SpyPlayer) Bust() {
-
-}
-
-//func Test_CreateNewGame(t *testing.T) {
-//	g := NewGame()
-//
-//	assert.NotNil(t, g)
-//	assert.Equal(t, 1, len(g.players))
-//}
-//
-//func Test_DealsCards(t *testing.T) {
-//
-//	g := NewGame(p)
-//	_ = Deal(g)
-//
-//	assert.Equal(t, 2, len(p.hand))
-//}
-//
-//func Test_PlayerTurn(t *testing.T) {
-//	g := NewGame(p)
-//
-//	PlayerTurn(g)
-//
-//	assert.Contains(t, spy.prompts, "Do you want to (h)it or (s)tand?")
-//}
-//
-//func Test_DetermineWinners(t *testing.T) {
-//
-//	spy := &TestPrompter{}
-//	p := NewPlayer(spy)
-//	g := NewGame(p)
-//	g.dealer = []deck.Card{{deck.Clubs, deck.Two}, {deck.Hearts, deck.Jack}}
-//	p.hand = []deck.Card{{deck.Clubs, deck.Ace}, {deck.Hearts, deck.Jack}}
-//
-//	DetermineWinners(g)
-//
-//	assert.Contains(t, spy.prompts, "You won!")
-//}
-
-func Test_Hit(t *testing.T) {
-	var s SpyPlayer
-	g := NewGame(&s)
-
-	hit(g)
-
-	assert.Equal(t, 1, len(s.h))
-}
-
-func Test_Stand(t *testing.T) {
-	var s SpyPlayer
-	g := NewGame(&s)
-
-	stand(g)
-
-	assert.Equal(t, 1, g.playerIdx)
 }
 
 func Test_PlayerTurn(t *testing.T) {
 	var s SpyPlayer
 	g := NewGame(&s)
+	deal(g)
 
-	PlayerTurn(g)
+	playerTurn(g)
 
 	assert.Equal(t, 2, s.actions)
 }
@@ -167,7 +99,7 @@ func Test_Scoring(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.score, tt.hand.score())
+			assert.Equal(t, tt.score, tt.hand.Score())
 		})
 	}
 }

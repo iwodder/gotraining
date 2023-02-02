@@ -2,6 +2,7 @@ package blackjack
 
 import (
 	"fmt"
+	"gotraining/exercise9/deck"
 	"io"
 )
 
@@ -10,41 +11,34 @@ type CliPlayer struct {
 	In  io.Reader
 }
 
-func (c *CliPlayer) ShowHand(h Hand) {
-	_, _ = fmt.Fprintf(c.Out, "Your hand=%s, (Score=%d)\n", h, h.score())
-}
-
-func (c *CliPlayer) Action(action ...Action) Action {
+func (c *CliPlayer) Action(hand Hand, dealer deck.Card, actions ...Action) Action {
+	_, _ = fmt.Fprintf(c.Out, "Dealer Hand=**HIDDEN**, %s\n", dealer)
+	_, _ = fmt.Fprintf(c.Out, "Your Hand=%s (score=%d)\n", hand, hand.Score())
 	_, _ = fmt.Fprintln(c.Out, "What do you want to do?")
-	for i, v := range action {
+	for i, v := range actions {
 		_, _ = fmt.Fprintf(c.Out, "\t%d) %s\n", i+1, v)
 	}
 	var opt int
 	_, _ = fmt.Fprintf(c.Out, "> ")
 	for _, err := fmt.Fscan(c.In, &opt); err != nil; _, err = fmt.Fscan(c.In, &opt) {
-		_, _ = fmt.Fprintf(c.Out, "You must enter a number between 1 and %d\n> ", len(action))
+		_, _ = fmt.Fprintf(c.Out, "You must enter a number between 1 and %d\n> ", len(actions))
 	}
-	return action[opt-1]
+	return actions[opt-1]
 }
 
 func (c *CliPlayer) Prompt(msg string) {
 	_, _ = fmt.Fprintln(c.Out, msg)
 }
 
-func (c *CliPlayer) Win() {
-	_, _ = fmt.Fprintln(c.Out, "You won!")
-}
-
-func (c *CliPlayer) Lose() {
-	_, _ = fmt.Fprintln(c.Out, "You lost.")
-}
-
-func (c *CliPlayer) Draw() {
-	_, _ = fmt.Fprintln(c.Out, "Draw.")
-}
-
-func (c *CliPlayer) Bust() {
-	_, _ = fmt.Fprintln(c.Out, "Bust, you lose.")
+func (c *CliPlayer) Result(r Result) {
+	switch r {
+	case Win:
+		_, _ = fmt.Fprintf(c.Out, "You're a winner!\n")
+	case Lose:
+		_, _ = fmt.Fprintf(c.Out, "You lose, try again!\n")
+	case Draw:
+		_, _ = fmt.Fprintf(c.Out, "---Draw----\n")
+	}
 }
 
 type StatsPlayer struct {
@@ -54,63 +48,31 @@ type StatsPlayer struct {
 	Player
 }
 
-func (s *StatsPlayer) Win() {
-	s.wins++
-	s.Player.Win()
-}
-
-func (s *StatsPlayer) Lose() {
-	s.losses++
-	s.Player.Lose()
-}
-
-func (s *StatsPlayer) Draw() {
-	s.draws++
-	s.Player.Draw()
-}
-
-func (s *StatsPlayer) Bust() {
-	s.losses++
-	s.Player.Draw()
+func (s *StatsPlayer) Result(r Result) {
+	switch r {
+	case Win:
+		s.wins++
+	case Lose:
+		s.losses++
+	case Draw:
+		s.draws++
+	}
+	s.Player.Result(r)
 }
 
 func (s *StatsPlayer) String() string {
 	return fmt.Sprintf("Wins=%d, Losses=%d, Draws=%d\n", s.wins, s.losses, s.draws)
 }
 
-type AI struct {
-	h     Hand
-	score int
-}
+type AI struct{}
 
-func (a *AI) ShowHand(h Hand) {
-	a.h = h
-	a.score = h.score()
-}
-
-func (a *AI) Action(action ...Action) Action {
-	if a.score >= 17 {
-		return Hit
+func (a *AI) Action(hand Hand, dealer deck.Card, actions ...Action) Action {
+	if hand.Score() >= 17 {
+		return ActionHit
 	}
-	return Stand
+	return ActionStand
 }
 
-func (a *AI) Prompt(msg string) {
-	//pass
-}
-
-func (a *AI) Win() {
-	//pass
-}
-
-func (a *AI) Lose() {
-	//pass
-}
-
-func (a *AI) Draw() {
-	//pass
-}
-
-func (a *AI) Bust() {
+func (a *AI) Result(r Result) {
 	//pass
 }
