@@ -3,8 +3,26 @@ package blackjack
 import (
 	"fmt"
 	"gotraining/exercise9/deck"
+	"html/template"
 	"io"
+	"log"
 )
+
+var (
+	add  = func(a, b int) int { return a + b }
+	menu = `Dealer Hand=**HIDDEN**, {{.Dealer}}
+Your Hand={{.Hand}} (score={{.Hand.Score}})
+What do you want to do?
+{{- range $index, $element := .Actions}}
+	{{add $index 1}}) {{$element}}{{end}}`
+	tmpl *template.Template
+)
+
+func init() {
+	tmpl = template.Must(template.New("test").Funcs(template.FuncMap{
+		"add": add,
+	}).Parse(menu))
+}
 
 type CliPlayer struct {
 	Out io.Writer
@@ -12,17 +30,10 @@ type CliPlayer struct {
 }
 
 func (c *CliPlayer) Action(hand Hand, dealer deck.Card, actions ...Action) Action {
-	_, _ = fmt.Fprintf(c.Out, "Dealer Hand=**HIDDEN**, %s\n", dealer)
-	_, _ = fmt.Fprintf(c.Out, "Your Hand=%s (score=%d)\n", hand, hand.Score())
-	_, _ = fmt.Fprintln(c.Out, "What do you want to do?")
-	for i, v := range actions {
-		_, _ = fmt.Fprintf(c.Out, "\t%d) %s\n", i+1, v)
+	if err := c.showMenu(hand, dealer, actions); err != nil {
+		log.Println("error showing menu:", err)
 	}
-	var opt int
-	_, _ = fmt.Fprintf(c.Out, "> ")
-	for _, err := fmt.Fscan(c.In, &opt); err != nil; _, err = fmt.Fscan(c.In, &opt) {
-		_, _ = fmt.Fprintf(c.Out, "You must enter a number between 1 and %d\n> ", len(actions))
-	}
+	opt := c.getInput(1, len(actions))
 	return actions[opt-1]
 }
 
@@ -39,6 +50,28 @@ func (c *CliPlayer) Result(r Result) {
 	case Draw:
 		_, _ = fmt.Fprintf(c.Out, "---Draw----\n")
 	}
+}
+
+func (c *CliPlayer) showMenu(hand Hand, dealer deck.Card, actions []Action) error {
+	return tmpl.Execute(c.Out, struct {
+		Hand    Hand
+		Dealer  deck.Card
+		Actions []Action
+	}{
+		hand, dealer, actions,
+	})
+}
+
+func (c *CliPlayer) getInput(start, end int) int {
+	var ret int
+	_, _ = fmt.Fprintln(c.Out, "> ")
+	for _, err := fmt.Fscan(c.In, &ret); ret < start || ret > end; _, err = fmt.Fscan(c.In, &ret) {
+		if err != nil {
+			log.Println("error getting input")
+		}
+		_, _ = fmt.Fprintf(c.Out, "You must enter a number between %d and %d\n> ", start, end)
+	}
+	return ret
 }
 
 type StatsPlayer struct {
@@ -67,10 +100,14 @@ func (s *StatsPlayer) String() string {
 type AI struct{}
 
 func (a *AI) Action(hand Hand, dealer deck.Card, actions ...Action) Action {
-	if hand.Score() >= 17 {
+	if hand.Score() <= 16 {
 		return ActionHit
 	}
 	return ActionStand
+}
+
+func (a *AI) Prompt(msg string) {
+	//pass
 }
 
 func (a *AI) Result(r Result) {

@@ -3,6 +3,7 @@ package blackjack
 import (
 	"github.com/stretchr/testify/assert"
 	"gotraining/exercise9/deck"
+	"strings"
 	"testing"
 )
 
@@ -33,6 +34,49 @@ func Test_PlayerTurn(t *testing.T) {
 	playerTurn(g)
 
 	assert.Equal(t, 2, s.actions)
+}
+
+func Test_PlayerAction(t *testing.T) {
+	var sb strings.Builder
+	cli := CliPlayer{Out: &sb, In: strings.NewReader("1")}
+
+	cli.showMenu(
+		[]deck.Card{{deck.Hearts, deck.Ace}, {deck.Clubs, deck.Jack}},
+		deck.Card{Suit: deck.Hearts, Value: deck.King},
+		[]Action{ActionStand})
+
+	exp := `Dealer Hand=**HIDDEN**, King of Hearts
+Your Hand=Ace of Hearts, Jack of Clubs (score=21)
+What do you want to do?
+	1) Stand`
+	assert.Equal(t, exp, sb.String())
+}
+
+func Test_PlayerInput(t *testing.T) {
+	var sb strings.Builder
+	cli := CliPlayer{Out: &sb, In: strings.NewReader("0\n6\n1")}
+
+	assert.Equal(t, 1, cli.getInput(1, 5))
+}
+
+func Test_DealerHitsUntilOver16(t *testing.T) {
+	g := NewGame()
+
+	g.dealer = []deck.Card{{deck.Hearts, deck.Six}, {deck.Clubs, deck.Six}}
+
+	dealerTurn(g)
+
+	assert.Greater(t, g.dealer.Score(), 16)
+}
+
+func Test_DealerHitsOnSoft17(t *testing.T) {
+	g := NewGame()
+
+	g.dealer = []deck.Card{{deck.Hearts, deck.Six}, {deck.Clubs, deck.Ace}}
+
+	dealerTurn(g)
+
+	assert.Greater(t, g.dealer.Score(), 16)
 }
 
 func Test_Scoring(t *testing.T) {

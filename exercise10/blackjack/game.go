@@ -162,11 +162,13 @@ func dealerTurn(g *Game) GameState {
 	soft17 := func(d []deck.Card) bool {
 		return has(d, deck.Ace) && has(d, deck.Six)
 	}
-
 	for _, p := range g.players {
 		p.Prompt(fmt.Sprintf("Dealer Hand=%s", g.dealer))
 	}
-	for dScore := g.dealer.Score(); dScore <= 16 || soft17(g.dealer); dScore = g.dealer.Score() {
+	if soft17(g.dealer) {
+		g.dealer = append(g.dealer, g.draw())
+	}
+	for dScore := g.dealer.Score(); dScore <= 16; dScore = g.dealer.Score() {
 		g.dealer = append(g.dealer, g.draw())
 		for _, p := range g.players {
 			p.Prompt(fmt.Sprintf("Dealer Hand=%s", g.dealer))
