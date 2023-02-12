@@ -49,9 +49,23 @@ func (a Action) String() string {
 	return a.Name
 }
 
+// Player describes the basic interactions required for blackjack
 type Player interface {
-	Action(hand Hand, dealer deck.Card, actions ...Action) Action
-	Result(r Result)
+
+	// Bet allows the player to place a wager for the round. Returning 0 skips
+	// the player for round. Implementations are responsible for tracking
+	// their account balance.
+	Bet(shuffled bool) int
+
+	// Action allows the player to hit or stand
+	Action(hand Hand, dealer deck.Card, actions []Action) Action
+
+	// Result pays out any winnings and indicates whether the hand was won,
+	// lost, or a draw.
+	Result(r Result, winnings int)
+
+	// Prompt provides information about the game for supporting UIs. Non-interactive
+	// players can safely no-op this method without loss of functionality.
 	Prompt(s string)
 }
 
@@ -89,8 +103,9 @@ func scoreIter(hand []deck.Card, acc int) int {
 	}
 }
 
-type PlayerHand struct {
+type PlayerData struct {
 	hand Hand
+	bet  int
 	Player
 }
 
@@ -99,36 +114,48 @@ type GameState func(*Game) GameState
 type Game struct {
 	deck      []deck.Card
 	dealer    Hand
-	players   []*PlayerHand
+	players   []*PlayerData
 	playerIdx int
+	state     GameState
+	shuffled  bool
 }
 
 func NewGame(players ...Player) *Game {
-	g := Game{deck: deck.New(deck.Quantity(3), deck.Shuffle)}
+	g := Game{deck: deck.New(deck.Quantity(3), deck.Shuffle), state: shuffle}
 	for _, v := range players {
-		g.players = append(g.players, &PlayerHand{Player: v})
+		g.players = append(g.players, &PlayerData{Player: v})
 	}
 	return &g
 }
 
 func (g *Game) Play(rounds int) {
 	for ; rounds > 0; rounds-- {
-		for state := deal(g); state != nil; {
-			state = state(g)
+		for g.state != nil {
+			g.state = g.state(g)
 		}
 		g.reset()
 	}
 }
 
 func shuffle(g *Game) GameState {
-	g.deck = append(g.deck, deck.New(deck.Quantity(3), deck.Shuffle)...)
+	switch {
+	case len(g.deck) < 10:
+		g.deck = append(g.deck, deck.New(deck.Quantity(3), deck.Shuffle)...)
+		g.shuffled = true
+	default:
+		g.shuffled = false
+	}
+	return bet
+}
+
+func bet(g *Game) GameState {
+	for _, p := range g.players {
+		p.bet = p.Bet(g.shuffled)
+	}
 	return deal
 }
 
 func deal(g *Game) GameState {
-	if len(g.deck) < 10 {
-		return shuffle
-	}
 	for i := 0; i < 2; i++ {
 		for _, p := range g.players {
 			p.hand = append(p.hand, g.draw())
@@ -150,7 +177,7 @@ func playerTurn(g *Game) GameState {
 
 	if g.playerIdx < len(g.players) {
 		p := g.players[g.playerIdx]
-		return p.Action(copyHand(p.hand), g.dealer[0], determineActions(p.hand)...).gs
+		return p.Action(copyHand(p.hand), g.dealer[0], determineActions(p.hand)).gs
 	}
 	return dealerTurn
 }
@@ -183,15 +210,13 @@ func determineWinners(g *Game) GameState {
 		playerScore := player.hand.Score()
 		switch {
 		case playerScore > 21:
-			player.Result(Lose)
-		case dealerScore > 21:
-			player.Result(Win)
-		case playerScore > dealerScore:
-			player.Result(Win)
+			player.Result(Lose, 0)
+		case dealerScore > 21 || playerScore > dealerScore:
+			player.Result(Win, player.bet*2)
 		case playerScore < dealerScore:
-			player.Result(Lose)
+			player.Result(Lose, 0)
 		case playerScore == dealerScore:
-			player.Result(Draw)
+			player.Result(Draw, player.bet)
 		}
 	}
 	return nil
@@ -200,6 +225,7 @@ func determineWinners(g *Game) GameState {
 func (g *Game) reset() {
 	g.playerIdx = 0
 	g.dealer = nil
+	g.state = shuffle
 	for _, p := range g.players {
 		p.hand = nil
 	}

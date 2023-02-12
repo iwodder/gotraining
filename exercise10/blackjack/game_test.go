@@ -12,7 +12,11 @@ type SpyPlayer struct {
 	actions int
 }
 
-func (s *SpyPlayer) Action(hand Hand, dealer deck.Card, actions ...Action) Action {
+func (s *SpyPlayer) Bet(shuffled bool) int {
+	return 1
+}
+
+func (s *SpyPlayer) Action(hand Hand, dealer deck.Card, actions []Action) Action {
 	s.h = hand
 	s.actions = len(actions)
 	return ActionHit
@@ -22,7 +26,7 @@ func (s *SpyPlayer) Prompt(msg string) {
 
 }
 
-func (s *SpyPlayer) Result(r Result) {
+func (s *SpyPlayer) Result(r Result, winnings int) {
 
 }
 
@@ -38,25 +42,46 @@ func Test_PlayerTurn(t *testing.T) {
 
 func Test_PlayerAction(t *testing.T) {
 	var sb strings.Builder
-	cli := CliPlayer{Out: &sb, In: strings.NewReader("1")}
+	cli := CliPlayer{out: &sb, in: strings.NewReader("1")}
 
-	cli.showMenu(
+	if err := cli.showMenu(
 		[]deck.Card{{deck.Hearts, deck.Ace}, {deck.Clubs, deck.Jack}},
 		deck.Card{Suit: deck.Hearts, Value: deck.King},
-		[]Action{ActionStand})
+		[]Action{ActionStand}); err != nil {
+		assert.Fail(t, "Unexpected error showing menu: %s", err)
+	}
 
 	exp := `Dealer Hand=**HIDDEN**, King of Hearts
 Your Hand=Ace of Hearts, Jack of Clubs (score=21)
 What do you want to do?
-	1) Stand`
+	1) Stand
+`
 	assert.Equal(t, exp, sb.String())
 }
 
 func Test_PlayerInput(t *testing.T) {
 	var sb strings.Builder
-	cli := CliPlayer{Out: &sb, In: strings.NewReader("0\n6\n1")}
+	cli := CliPlayer{out: &sb, in: strings.NewReader("0\n6\n1")}
 
 	assert.Equal(t, 1, cli.getInput(1, 5))
+}
+
+func Test_Bet(t *testing.T) {
+	s := SpyPlayer{}
+	g := NewGame(&s)
+	bet(g)
+
+	if g.players[0].bet != 1 {
+		t.Errorf("Should've set the player bet, wanted 1, got %d", g.players[0].bet)
+	}
+}
+
+func Test_CLIPlayerBetWhenShuffled(t *testing.T) {
+	var sb strings.Builder
+	p := NewCLIPlayer(strings.NewReader("1\n"), &sb)
+	amt := p.Bet(false)
+
+	assert.Equal(t, 1, amt)
 }
 
 func Test_DealerHitsUntilOver16(t *testing.T) {
