@@ -3,7 +3,6 @@ package blackjack
 import (
 	"fmt"
 	"gotraining/exercise9/deck"
-	"strings"
 )
 
 type Result string
@@ -15,37 +14,54 @@ const (
 )
 
 var (
-	ActionHit   Action
-	ActionStand Action
+	ActionHit   GameAction
+	ActionStand GameAction
+	ActionSplit GameAction
 )
 
 func init() {
-	ActionHit = Action{
+	ActionHit = GameAction{
 		Name: "Hit",
 		gs: func(g *Game) GameState {
 			p := g.players[g.playerIdx]
-			p.hand = append(p.hand, g.draw())
-			if p.hand.Score() > 21 {
+			p.hands[g.handIdx] = append(p.hands[g.handIdx], g.draw())
+			return playerTurn
+		},
+	}
+	ActionStand = GameAction{
+		Name: "Stand",
+		gs: func(g *Game) GameState {
+			p := g.players[g.playerIdx]
+			if g.handIdx < len(p.hands)-1 {
+				g.handIdx++
+			} else {
+				g.handIdx = 0
 				g.playerIdx++
 			}
 			return playerTurn
 		},
 	}
-	ActionStand = Action{
-		Name: "Stand",
+	ActionSplit = GameAction{
+		Name: "Split",
 		gs: func(g *Game) GameState {
-			g.playerIdx++
+			p := g.players[g.playerIdx]
+			if len(p.hands) < 2 {
+				p.hands = append(p.hands, Hand{p.hands[0][1]})
+				p.hands[0] = Hand{p.hands[0][0]}
+				p.hands[0] = append(p.hands[0], g.draw())
+				p.hands[1] = append(p.hands[1], g.draw())
+			}
 			return playerTurn
 		},
 	}
 }
 
-type Action struct {
+type GameAction struct {
 	Name string
 	gs   GameState
 }
 
-func (a Action) String() string {
+func (a GameAction) String() string {
 	return a.Name
 }
 
@@ -58,7 +74,7 @@ type Player interface {
 	Bet(shuffled bool) int
 
 	// Action allows the player to hit or stand
-	Action(hand Hand, dealer deck.Card, actions []Action) Action
+	Action(hand Hand, dealer deck.Card, actions []GameAction) GameAction
 
 	// Result pays out any winnings and indicates whether the hand was won,
 	// lost, or a draw.
@@ -69,53 +85,20 @@ type Player interface {
 	Prompt(s string)
 }
 
-type Hand []deck.Card
-
-func (h Hand) String() string {
-	var ret []string
-	for _, v := range h {
-		ret = append(ret, v.String())
-	}
-	return strings.Join(ret, ", ")
-}
-
-func (h Hand) Score() int {
-	return scoreIter(h, 0)
-}
-
-func scoreIter(hand []deck.Card, acc int) int {
-	if len(hand) == 0 {
-		return acc
-	}
-	card := hand[0]
-	switch card.Value {
-	case deck.Ace:
-		s := scoreIter(hand[1:], acc+11)
-		if s <= 21 {
-			return s
-		} else {
-			return scoreIter(hand[1:], acc+1)
-		}
-	case deck.Jack, deck.Queen, deck.King:
-		return scoreIter(hand[1:], acc+10)
-	default:
-		return scoreIter(hand[1:], acc+int(card.Value))
-	}
-}
+type GameState func(*Game) GameState
 
 type PlayerData struct {
-	hand Hand
-	bet  int
+	hands []Hand
+	bets  []int
 	Player
 }
-
-type GameState func(*Game) GameState
 
 type Game struct {
 	deck      []deck.Card
 	dealer    Hand
 	players   []*PlayerData
 	playerIdx int
+	handIdx   int
 	state     GameState
 	shuffled  bool
 }
@@ -123,7 +106,7 @@ type Game struct {
 func NewGame(players ...Player) *Game {
 	g := Game{deck: deck.New(deck.Quantity(3), deck.Shuffle), state: shuffle}
 	for _, v := range players {
-		g.players = append(g.players, &PlayerData{Player: v})
+		g.players = append(g.players, &PlayerData{Player: v, hands: make([]Hand, 1, 2), bets: make([]int, 0, 2)})
 	}
 	return &g
 }
@@ -150,7 +133,7 @@ func shuffle(g *Game) GameState {
 
 func bet(g *Game) GameState {
 	for _, p := range g.players {
-		p.bet = p.Bet(g.shuffled)
+		p.bets = append(p.bets, p.Bet(g.shuffled))
 	}
 	return deal
 }
@@ -158,7 +141,7 @@ func bet(g *Game) GameState {
 func deal(g *Game) GameState {
 	for i := 0; i < 2; i++ {
 		for _, p := range g.players {
-			p.hand = append(p.hand, g.draw())
+			p.hands[0] = append(p.hands[0], g.draw())
 		}
 		g.dealer = append(g.dealer, g.draw())
 	}
@@ -171,13 +154,28 @@ func playerTurn(g *Game) GameState {
 		copy(ph, h)
 		return ph
 	}
-	determineActions := func(h Hand) []Action {
-		return []Action{ActionHit, ActionStand}
+	determineActions := func(h Hand) []GameAction {
+		if len(h) < 2 {
+			panic("Player cannot play with less than two cards in their hand")
+		}
+		if h[0].Value == h[1].Value {
+			return []GameAction{ActionHit, ActionStand, ActionSplit}
+		}
+		return []GameAction{ActionHit, ActionStand}
 	}
 
+	p := g.players[g.playerIdx]
+	if p.hands[g.handIdx].Score() > 21 {
+		g.handIdx++
+	}
+	if g.handIdx < len(p.hands) {
+		return p.Action(copyHand(p.hands[g.handIdx]), g.dealer[0], determineActions(p.hands[g.handIdx])).gs
+	}
+	g.playerIdx++
+	g.handIdx = 0
 	if g.playerIdx < len(g.players) {
 		p := g.players[g.playerIdx]
-		return p.Action(copyHand(p.hand), g.dealer[0], determineActions(p.hand)).gs
+		return p.Action(copyHand(p.hands[g.handIdx]), g.dealer[0], determineActions(p.hands[g.handIdx])).gs
 	}
 	return dealerTurn
 }
@@ -207,16 +205,18 @@ func dealerTurn(g *Game) GameState {
 func determineWinners(g *Game) GameState {
 	dealerScore := g.dealer.Score()
 	for _, player := range g.players {
-		playerScore := player.hand.Score()
-		switch {
-		case playerScore > 21:
-			player.Result(Lose, 0)
-		case dealerScore > 21 || playerScore > dealerScore:
-			player.Result(Win, player.bet*2)
-		case playerScore < dealerScore:
-			player.Result(Lose, 0)
-		case playerScore == dealerScore:
-			player.Result(Draw, player.bet)
+		for i, h := range player.hands {
+			playerScore := h.Score()
+			switch {
+			case playerScore > 21:
+				player.Result(Lose, 0)
+			case dealerScore > 21 || playerScore > dealerScore:
+				player.Result(Win, player.bets[i]*2)
+			case playerScore < dealerScore:
+				player.Result(Lose, 0)
+			case playerScore == dealerScore:
+				player.Result(Draw, player.bets[i])
+			}
 		}
 	}
 	return nil
@@ -227,7 +227,7 @@ func (g *Game) reset() {
 	g.dealer = nil
 	g.state = shuffle
 	for _, p := range g.players {
-		p.hand = nil
+		p.hands = nil
 	}
 }
 

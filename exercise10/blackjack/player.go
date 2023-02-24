@@ -50,7 +50,7 @@ func (c *CliPlayer) Bet(shuffled bool) int {
 	return amt
 }
 
-func (c *CliPlayer) Action(hand Hand, dealer deck.Card, actions []Action) Action {
+func (c *CliPlayer) Action(hand Hand, dealer deck.Card, actions []GameAction) GameAction {
 	if err := c.showMenu(hand, dealer, actions); err != nil {
 		log.Println("error showing menu:", err)
 	}
@@ -66,11 +66,11 @@ func (c *CliPlayer) Result(r Result, winnings int) {
 
 }
 
-func (c *CliPlayer) showMenu(hand Hand, dealer deck.Card, actions []Action) error {
+func (c *CliPlayer) showMenu(hand Hand, dealer deck.Card, actions []GameAction) error {
 	return tmpl.Execute(c.out, struct {
 		Hand    Hand
 		Dealer  deck.Card
-		Actions []Action
+		Actions []GameAction
 	}{
 		hand, dealer, actions,
 	})
@@ -127,7 +127,7 @@ func (a *AI) Prompt(s string) {
 	//no-op
 }
 
-func (a *AI) Action(hand Hand, dealer deck.Card, actions []Action) Action {
+func (a *AI) Action(hand Hand, dealer deck.Card, actions []GameAction) GameAction {
 	if hand.Score() <= 16 {
 		return ActionHit
 	}

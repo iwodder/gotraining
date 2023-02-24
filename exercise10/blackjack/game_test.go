@@ -8,18 +8,19 @@ import (
 )
 
 type SpyPlayer struct {
-	h       Hand
-	actions int
+	h               Hand
+	possibleActions []GameAction
+	action          GameAction
 }
 
 func (s *SpyPlayer) Bet(shuffled bool) int {
 	return 1
 }
 
-func (s *SpyPlayer) Action(hand Hand, dealer deck.Card, actions []Action) Action {
+func (s *SpyPlayer) Action(hand Hand, dealer deck.Card, actions []GameAction) GameAction {
 	s.h = hand
-	s.actions = len(actions)
-	return ActionHit
+	s.possibleActions = actions
+	return s.action
 }
 
 func (s *SpyPlayer) Prompt(msg string) {
@@ -37,7 +38,7 @@ func Test_PlayerTurn(t *testing.T) {
 
 	playerTurn(g)
 
-	assert.Equal(t, 2, s.actions)
+	assert.Equal(t, 2, len(s.possibleActions))
 }
 
 func Test_PlayerAction(t *testing.T) {
@@ -47,7 +48,7 @@ func Test_PlayerAction(t *testing.T) {
 	if err := cli.showMenu(
 		[]deck.Card{{deck.Hearts, deck.Ace}, {deck.Clubs, deck.Jack}},
 		deck.Card{Suit: deck.Hearts, Value: deck.King},
-		[]Action{ActionStand}); err != nil {
+		[]GameAction{ActionStand}); err != nil {
 		assert.Fail(t, "Unexpected error showing menu: %s", err)
 	}
 
@@ -71,8 +72,8 @@ func Test_Bet(t *testing.T) {
 	g := NewGame(&s)
 	bet(g)
 
-	if g.players[0].bet != 1 {
-		t.Errorf("Should've set the player bet, wanted 1, got %d", g.players[0].bet)
+	if g.players[0].bets[0] != 1 {
+		t.Errorf("Should've set the player bet, wanted 1, got %d", g.players[0].bets)
 	}
 }
 
@@ -102,6 +103,69 @@ func Test_DealerHitsOnSoft17(t *testing.T) {
 	dealerTurn(g)
 
 	assert.Greater(t, g.dealer.Score(), 16)
+}
+
+func Test_SplitHand(t *testing.T) {
+	g := NewGame()
+	g.players = append(g.players, &PlayerData{
+		hands:  []Hand{{deck.Card{Suit: deck.Hearts, Value: deck.King}, deck.Card{Suit: deck.Clubs, Value: deck.King}}},
+		bets:   []int{1},
+		Player: &SpyPlayer{},
+	})
+
+	ActionSplit.gs(g)
+
+	assert.Equal(t, 2, len(g.players[0].hands))
+	assert.Equal(t, 2, len(g.players[0].hands[0]))
+	assert.Equal(t, 2, len(g.players[0].hands[1]))
+}
+
+func Test_PlayerPromptedToSplit(t *testing.T) {
+	spy := &SpyPlayer{}
+	g := NewGame()
+	g.dealer = Hand{deck.Card{Suit: deck.Hearts, Value: deck.King}, deck.Card{Suit: deck.Clubs, Value: deck.King}}
+	g.players = append(g.players, &PlayerData{
+		hands:  []Hand{{deck.Card{Suit: deck.Hearts, Value: deck.King}, deck.Card{Suit: deck.Clubs, Value: deck.King}}},
+		bets:   []int{1},
+		Player: spy,
+	})
+
+	playerTurn(g)
+
+	for _, v := range spy.possibleActions {
+		if v.Name == ActionSplit.Name {
+			return
+		}
+	}
+	t.Fatal("Expected to find split action")
+}
+
+func Test_PlaysBothHands(t *testing.T) {
+	s := &SpyPlayer{}
+	s.action = ActionHit
+	g := NewGame()
+	g.deck = []deck.Card{{Suit: deck.Hearts, Value: deck.Three}, {Suit: deck.Hearts, Value: deck.Four}}
+	g.dealer = Hand{deck.Card{Suit: deck.Hearts, Value: deck.King}, deck.Card{Suit: deck.Clubs, Value: deck.King}}
+	g.players = append(g.players, &PlayerData{
+		hands: []Hand{
+			{deck.Card{Suit: deck.Hearts, Value: deck.King}, deck.Card{Suit: deck.Clubs, Value: deck.King}},
+			{deck.Card{Suit: deck.Spades, Value: deck.Jack}, deck.Card{Suit: deck.Clubs, Value: deck.Six}},
+		},
+		bets:   []int{1},
+		Player: s,
+	})
+
+	nextState := playerTurn(g)
+	nextState = nextState(g)
+	assert.Equal(t, 3, len(g.players[0].hands[0]))
+	assert.Equal(t, 23, g.players[0].hands[0].Score())
+
+	s.action = ActionStand
+	nextState = nextState(g)
+	nextState(g)
+	assert.Equal(t, 2, len(g.players[0].hands[1]))
+	assert.Equal(t, 16, g.players[0].hands[1].Score())
+	assert.Equal(t, 1, g.playerIdx)
 }
 
 func Test_Scoring(t *testing.T) {
