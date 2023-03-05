@@ -6,7 +6,7 @@ package hn_test
 import (
 	"fmt"
 
-	"github.com/gophercises/quiet_hn/hn"
+	"gotraining/exercise13/hn"
 )
 
 func ExampleClient() {
