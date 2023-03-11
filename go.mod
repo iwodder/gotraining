@@ -11,6 +11,11 @@ require (
 )
 
 require (
+	github.com/alecthomas/chroma/v2 v2.5.0 // indirect
+	github.com/dlclark/regexp2 v1.4.0 // indirect
+)
+
+require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
